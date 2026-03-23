@@ -1,0 +1,23 @@
+[Unit]
+Description=CIN Telegram Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/opt/cin_agent
+EnvironmentFile=/etc/cin_agent/env
+ExecStart=/opt/cin_agent/venv/bin/python telegram_bot.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cin-agent
+
+# Graceful shutdown
+TimeoutStopSec=30
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target
