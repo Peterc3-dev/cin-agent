@@ -60,6 +60,11 @@ COMMAND_PATTERNS = [
      "find_file"),
 
     # Process
+    # TODO: the leading "do" alternative over-matches conversational phrases
+    # like "do you remember my name?" and routes them to command/execute
+    # instead of chat. Tighten this (e.g. require "do" to be followed by a
+    # verb, or drop it) without breaking "do <cmd>" usage. Left as-is here to
+    # avoid changing routing behavior in a hygiene-only pass.
     (r"(?:run|execute|do)\s+(.+)",
      "execute"),
 
@@ -165,9 +170,10 @@ def _build_command(action: str, match: re.Match, original: str) -> Optional[str]
         return f"mkdir -p {dirname}" if dirname else None
 
     if action == "git":
-        # Pass git commands through directly
-        lower = original.lower()
-        git_match = re.search(r"(git\s+\w+.*)", lower)
+        # Pass git commands through directly. Match case-insensitively but
+        # capture from the ORIGINAL string so argument casing is preserved
+        # (e.g. branch names, commit messages must not be lowercased).
+        git_match = re.search(r"(git\s+\w+.*)", original, re.IGNORECASE)
         return git_match.group(1) if git_match else None
 
     if action == "execute":

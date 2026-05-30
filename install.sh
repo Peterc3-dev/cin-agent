@@ -67,8 +67,13 @@ OLLAMA_MODEL=llama3
 # ANTHROPIC_API_KEY=sk-ant-...
 
 # Data directory
-CIN_DATA_DIR=/home/YOUR_USER/.cin_agent
+CIN_DATA_DIR=__CIN_DATA_DIR__
 ENVEOF
+    # Resolve the bot user's home directory and fill in the data dir, so the
+    # config never ships a hardcoded developer path.
+    BOT_HOME="$(getent passwd "$BOT_USER" | cut -d: -f6)"
+    BOT_HOME="${BOT_HOME:-/home/$BOT_USER}"
+    sed -i "s|__CIN_DATA_DIR__|${BOT_HOME}/.cin_agent|g" "$ENV_FILE"
     chmod 600 "$ENV_FILE"
     warn "Edit $ENV_FILE and add your TELEGRAM_BOT_TOKEN before starting"
 else
