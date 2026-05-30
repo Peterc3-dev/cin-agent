@@ -1,0 +1,8 @@
+# Runtime dependencies for the CIN Telegram Agent.
+# Only telegram_bot.py needs third-party packages; command_parser.py,
+# shell_ghost.py and memory.py are pure standard library.
+#
+# python-telegram-bot 20+ is required for the async Application API used here
+# (Application.builder(), ContextTypes, async handlers, run_polling).
+python-telegram-bot>=20.0,<22
+httpx>=0.24,<1.0

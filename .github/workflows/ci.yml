@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install lint/test tooling
+        # Only ruff + pytest are needed. The unit tests cover the pure-logic
+        # modules (command_parser, shell_ghost, memory) and import no heavy or
+        # runtime-only dependencies (no telegram, httpx, GPU, or model weights),
+        # so the project's runtime requirements are intentionally NOT installed.
+        run: python -m pip install --upgrade pip ruff pytest
+
+      - name: Ruff (static lint)
+        run: ruff check .
+
+      - name: Pytest (pure-logic unit tests)
+        # testpaths in pyproject.toml scopes collection to ./tests.
+        run: pytest -q tests

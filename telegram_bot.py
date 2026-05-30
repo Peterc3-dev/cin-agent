@@ -4,12 +4,10 @@ CIN Telegram Agent — ThinkCentre Edition
 Conversation · Command · Shell Ghost integration
 """
 
-import asyncio
 import logging
 import os
 import json
 import httpx
-from datetime import datetime
 from pathlib import Path
 
 from telegram import Update
@@ -37,6 +35,9 @@ OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3")
 USE_CLOUD_FALLBACK = os.environ.get("ANTHROPIC_API_KEY", "") != ""
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 DATA_DIR = Path(os.environ.get("CIN_DATA_DIR", "~/.cin_agent")).expanduser()
+# Ensure the data directory exists before the FileHandler opens bot.log,
+# otherwise configuring logging at import time raises FileNotFoundError.
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -368,7 +369,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_html(
                 "🤔 I understood you want to do something, but couldn't figure out the exact command.\n"
                 "Can you be more specific?\n\n"
-                f"<i>Example: show disk space, list files in ~/Downloads</i>"
+                "<i>Example: show disk space, list files in ~/Downloads</i>"
             )
             return
 
