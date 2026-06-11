@@ -30,6 +30,10 @@ TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 ALLOWED_USERS = set(
     int(x) for x in os.environ.get("ALLOWED_USER_IDS", "").split(",") if x.strip()
 )
+# This bot executes natural-language shell commands, so an unset allowlist must
+# fail CLOSED, not open. Set ALLOW_ALL_USERS=1 to intentionally run without an
+# allowlist (e.g. a throwaway sandbox); otherwise an empty allowlist denies all.
+ALLOW_ALL = os.environ.get("ALLOW_ALL_USERS", "") == "1"
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3")
 USE_CLOUD_FALLBACK = os.environ.get("ANTHROPIC_API_KEY", "") != ""
@@ -57,7 +61,8 @@ CLOUD_STATUS = "⚡️ <i>ThinkCentre → Cloud · $0.01</i>"
 
 def is_allowed(user_id: int) -> bool:
     if not ALLOWED_USERS:
-        return True  # Open if no allowlist set
+        # Fail closed: no allowlist => deny everyone unless ALLOW_ALL_USERS=1.
+        return ALLOW_ALL
     return user_id in ALLOWED_USERS
 
 
@@ -183,6 +188,9 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_allowed(update.effective_user.id):
+        await update.message.reply_text("🔒 Not authorized.")
+        return
     result = shell_ghost.execute("uptime && free -h && df -h /")
     ollama_ok = False
     try:
@@ -204,6 +212,9 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cmd_clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_allowed(update.effective_user.id):
+        await update.message.reply_text("🔒 Not authorized.")
+        return
     memory.clear_user_history(update.effective_user.id)
     await update.message.reply_text("🗑 Conversation history cleared.")
 
@@ -408,7 +419,9 @@ def main():
     logger.info("⚡ CIN Agent starting up")
     logger.info(f"Ollama: {OLLAMA_URL} / model: {OLLAMA_MODEL}")
     logger.info(f"Cloud fallback: {'enabled' if USE_CLOUD_FALLBACK else 'disabled'}")
-    logger.info(f"Allowed users: {ALLOWED_USERS or 'all'}")
+    logger.info(
+        f"Allowed users: {ALLOWED_USERS or ('ALL (ALLOW_ALL_USERS=1)' if ALLOW_ALL else 'NONE — denying all; set ALLOWED_USER_IDS')}"
+    )
 
     app = Application.builder().token(TOKEN).build()
 
